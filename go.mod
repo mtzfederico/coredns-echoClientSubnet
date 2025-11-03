@@ -1,4 +1,4 @@
-module mtzfederico/coredns-echoClientSubnet
+module github.com/mtzfederico/coredns-echoClientSubnet
 
 go 1.24.0
 
