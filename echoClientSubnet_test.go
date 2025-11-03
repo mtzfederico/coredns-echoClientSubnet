@@ -2,6 +2,7 @@ package echoClientSubnet
 
 import (
 	"context"
+	"encoding/hex"
 	"net"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestWithIPv4(t *testing.T) {
 
 	value := rec.Msg.Answer[0].(*dns.TXT)
 
-	if value.Txt[0] != "192.168.0.0/24/0" && value.Txt[1] != "Remote address: 10.240.0.1:40212" {
+	if value.Txt[0] != "192.168.0.0/24/0. Remote address: 10.240.0.1:40212" {
 		t.Errorf("IPv4 test Failed. got %q", rec.Msg.Answer[0].(*dns.TXT).String())
 	}
 }
@@ -82,7 +83,89 @@ func TestWithIPv6(t *testing.T) {
 
 	value := rec.Msg.Answer[0].(*dns.TXT)
 
-	if value.Txt[0] != "2a11:f2c0:fff7:1234::/64/0" && value.Txt[1] != "Remote address: 10.240.0.1:40212" {
+	if value.Txt[0] != "[2a11:f2c0:fff7:1234::]/64/0. Remote address: 10.240.0.1:40212" {
+		t.Errorf("IPv6 test Failed. got %q", rec.Msg.Answer[0].(*dns.TXT).String())
+	}
+}
+
+func TestNoClientSubnet(t *testing.T) {
+	req := new(dns.Msg)
+	req.SetQuestion("clientSubnet.example.invalid.", dns.TypeTXT)
+
+	nsid := new(dns.EDNS0_NSID)
+	nsid.Code = dns.EDNS0SUBNET
+	nsid.Nsid = hex.EncodeToString([]byte("test"))
+
+	edns := new(dns.OPT)
+	edns.Hdr.Name = "."
+	edns.Hdr.Rrtype = dns.TypeOPT
+	edns.Option = []dns.EDNS0{nsid}
+	// https://www.dnsflagday.net/2020/
+	edns.SetUDPSize(1232)
+	edns.SetDo()
+	req.Extra = append(req.Extra, edns)
+
+	a := &echoClientSubnet{}
+
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	_, err := a.ServeDNS(context.Background(), rec, req)
+
+	if err != nil {
+		t.Errorf("Expected no error, but got %q", err)
+	}
+
+	value := rec.Msg.Answer[0].(*dns.TXT)
+
+	if value.Txt[0] != "No EDNS Client subnet option found. Remote address: 10.240.0.1:40212" {
+		t.Errorf("IPv6 test Failed. got %q", rec.Msg.Answer[0].(*dns.TXT).String())
+	}
+}
+
+func TestNoEDNSOptions(t *testing.T) {
+	req := new(dns.Msg)
+	req.SetQuestion("clientSubnet.example.invalid.", dns.TypeTXT)
+
+	edns := new(dns.OPT)
+	edns.Hdr.Name = "."
+	edns.Hdr.Rrtype = dns.TypeOPT
+	edns.Option = []dns.EDNS0{}
+	// https://www.dnsflagday.net/2020/
+	edns.SetUDPSize(1232)
+	edns.SetDo()
+	req.Extra = append(req.Extra, edns)
+
+	a := &echoClientSubnet{}
+
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	_, err := a.ServeDNS(context.Background(), rec, req)
+
+	if err != nil {
+		t.Errorf("Expected no error, but got %q", err)
+	}
+
+	value := rec.Msg.Answer[0].(*dns.TXT)
+
+	if value.Txt[0] != "No EDNS Client subnet option found. Remote address: 10.240.0.1:40212" {
+		t.Errorf("IPv6 test Failed. got %q", rec.Msg.Answer[0].(*dns.TXT).String())
+	}
+}
+
+func TestNoEDNS(t *testing.T) {
+	req := new(dns.Msg)
+	req.SetQuestion("clientSubnet.example.invalid.", dns.TypeTXT)
+
+	a := &echoClientSubnet{}
+
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	_, err := a.ServeDNS(context.Background(), rec, req)
+
+	if err != nil {
+		t.Errorf("Expected no error, but got %q", err)
+	}
+
+	value := rec.Msg.Answer[0].(*dns.TXT)
+
+	if value.Txt[0] != "No EDNS options found. Remote address: 10.240.0.1:40212" {
 		t.Errorf("IPv6 test Failed. got %q", rec.Msg.Answer[0].(*dns.TXT).String())
 	}
 }
