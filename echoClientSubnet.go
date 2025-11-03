@@ -40,7 +40,7 @@ func (e echoClientSubnet) ServeDNS(ctx context.Context, w dns.ResponseWriter, r 
 	opt := state.Req.IsEdns0()
 	if opt == nil {
 		log.Debug("No EDNS options in request")
-		resp.Txt = []string{"No EDNS options found.", fmt.Sprintf("Remote address: %s", state.RemoteAddr())}
+		resp.Txt = []string{fmt.Sprintf("No EDNS options found. Remote address: %s", state.RemoteAddr())}
 		answers = append(answers, resp)
 		msg.Answer = answers
 		w.WriteMsg(msg)
@@ -50,7 +50,7 @@ func (e echoClientSubnet) ServeDNS(ctx context.Context, w dns.ResponseWriter, r 
 	for i := range opt.Option {
 		option := opt.Option[i]
 		if option.Option() == dns.EDNS0SUBNET {
-			resp.Txt = []string{option.String(), fmt.Sprintf("Remote address: %s", state.RemoteAddr())}
+			resp.Txt = []string{fmt.Sprintf("%s. Remote address: %s", option.String(), state.RemoteAddr())}
 			answers = append(answers, resp)
 			msg.Answer = answers
 
@@ -61,7 +61,7 @@ func (e echoClientSubnet) ServeDNS(ctx context.Context, w dns.ResponseWriter, r 
 
 	log.Debug("No EDNS client subnet option in request")
 
-	resp.Txt = []string{"No EDNS Client subnet option found.", fmt.Sprintf("Remote address: %s", state.RemoteAddr())}
+	resp.Txt = []string{fmt.Sprintf("No EDNS Client subnet option found. Remote address: %s", state.RemoteAddr())}
 	answers = append(answers, resp)
 	msg.Answer = answers
 
